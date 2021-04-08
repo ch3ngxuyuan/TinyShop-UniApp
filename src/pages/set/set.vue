@@ -1,204 +1,185 @@
 <template>
-	<view class="container">
-		<view class="list-cell b-b m-t" @tap="navTo('/pages/userinfo/userinfo')" hover-class="cell-hover" :hover-stay-time="50">
-			<text class="cell-tit">个人资料</text>
-			<text class="cell-more yticon icon-you"></text>
+	<view class="set">
+		<view
+			class="list-cell b-b"
+			:class="{ 'm-t': item.class === 'mT' }"
+			v-for="item in setList"
+			:key="item.title"
+			@tap="navTo(item.url)"
+			hover-class="cell-hover"
+			:hover-stay-time="50"
+		>
+			<text class="cell-tit">{{ item.title }}</text>
+			<text class="cell-tip">{{ item.content }}</text>
+			<text class="cell-more iconfont iconyou"></text>
 		</view>
-		<view class="list-cell b-b" @tap="navTo('/pages/public/password?type=1')" hover-class="cell-hover" :hover-stay-time="50">
-			<text class="cell-tit">修改密码</text>
-			<text class="cell-more yticon icon-you"></text>
-		</view>
-		<view class="list-cell b-b" @tap="navTo('/pages/third-party/list')" hover-class="cell-hover" :hover-stay-time="50">
-			<text class="cell-tit">授权管理</text>
-			<text class="cell-more yticon icon-you"></text>
-		</view>
-		<view class="list-cell b-b m-t" @tap="navTo('/pages/invoice/invoice')" hover-class="cell-hover" :hover-stay-time="50">
-			<text class="cell-tit">发票管理</text>
-			<text class="cell-more yticon icon-you"></text>
-		</view>
-		<view class="list-cell b-b" @tap="navTo('/pages/invoice/list')" hover-class="cell-hover" :hover-stay-time="50">
-			<text class="cell-tit">开票历史</text>
-			<text class="cell-more yticon icon-you"></text>
-		</view>
-		<!--<view class="list-cell" @tap="navTo('实名认证')" hover-class="cell-hover" :hover-stay-time="50">-->
-			<!--<text class="cell-tit">实名认证</text>-->
-			<!--<text class="cell-more yticon icon-you"></text>-->
-		<!--</view>-->
-
+		<!-- #ifdef APP-PLUS -->
 		<view class="list-cell m-t">
 			<text class="cell-tit">消息推送</text>
-			<switch checked color="#fa436a" @change="switchChange" />
+			<switch :checked="notifyChecked" :color="themeColor.color" />
 		</view>
-		<view class="list-cell m-t b-b" @tap="navTo('清除缓存')" hover-class="cell-hover" :hover-stay-time="50">
-			<text class="cell-tit">清除缓存</text>
-			<text class="cell-tip">{{ currentStorageSize }} kb</text>
-			<text class="cell-more yticon icon-you"></text>
+		<!-- #endif -->
+		<view class="cu-list menu sm-border card-menu" v-if="styleUserIsOpen">
+			<view class="cu-item">
+				<view class="content flex align-center">
+					<text
+						class="cuIcon-colorlens"
+						:class="'text-' + themeColor.name"
+					></text>
+					<view
+						class="padding solid radius shadow-blur"
+						:class="'bg-' + themeColor.name"
+					></view>
+					<view class="title"
+						>主题色：<text :class="'text-' + themeColor.name">{{
+							themeColor.title
+						}}</text></view
+					>
+				</view>
+				<view class="action">
+					<button
+						class="cu-btn round shadow"
+						@click="showColorModal"
+						:class="'bg-' + themeColor.name"
+					>
+						<text class="cuIcon-colorlens"></text> 选择主题
+					</button>
+				</view>
+			</view>
 		</view>
-		<view class="list-cell b-b" @tap="navTo('/pages/about/about')" hover-class="cell-hover" :hover-stay-time="50">
-			<text class="cell-tit">关于RF商城</text>
-			<text class="cell-more yticon icon-you"></text>
-		</view>
-		<view class="list-cell b-b">
-			<text class="cell-tit">当前版本</text>
-			<text class="cell-tip">当前版本 1.0.0</text>
-			<text class="cell-more yticon icon-you"></text>
-		</view>
-		<view class="list-cell m-t" @tap="navTo('/pages/feedback/list')">
-			<text class="cell-tit">意见反馈</text>
-			<text class="cell-more yticon icon-you"></text>
-		</view>
-		<view class="list-cell log-out-btn" @tap="toLogout">
+		<view
+			class="list-cell log-out-btn"
+			:class="'text-' + themeColor.name"
+			@tap="toLogout"
+		>
 			<text class="cell-tit">退出登录</text>
 		</view>
-
-    <!--进度条加载-->
-		<rf-load-progress :height="CustomBar" :progress="loadProgress"></rf-load-progress>
+		<!-- modal -->
+		<!-- 选择颜色模态框 -->
+		<view class="cu-modal" :class="{ show: colorModal }">
+			<view class="cu-dialog">
+				<view class="cu-bar justify-end solid-bottom">
+					<view class="content">选择颜色</view>
+					<view class="action" @tap="colorModal = false">
+						<text class="cuIcon-close text-red"></text>
+					</view>
+				</view>
+				<view class="grid col-5 padding">
+					<view
+						class="padding-xs"
+						v-for="(item, index) in themeList"
+						:key="index"
+						@tap="SetColor(item)"
+						:data-color="item.name"
+					>
+						<view class="padding-tb radius" :class="'bg-' + item.name">
+							{{ item.title }}
+						</view>
+					</view>
+				</view>
+			</view>
+		</view>
 	</view>
 </template>
-
 <script>
-	import {
-		mapMutations, mapState
-	} from 'vuex';
-	import {logout} from "@/api/login";
-	export default {
-		data() {
-			return {
-				loadProgress: 0,
-				CustomBar: this.CustomBar,
-				currentStorageSize: 0,
-				user: {},
-			};
+import { logout } from '@/api/login';
+export default {
+	data() {
+		return {
+			isVersionUpgradeShow: false,
+			loadProgress: 0,
+			CustomBar: this.CustomBar,
+			user: {},
+			setList: this.$mConstDataConfig.setList,
+			styleUserIsOpen: this.$mSettingConfig.styleUserIsOpen,
+			notifyChecked: false,
+			isNewVersion: false,
+			colorModal: false,
+			themeList: this.$mConstDataConfig.themeList
+		};
+	},
+	onLoad() {
+		this.initData();
+		// #ifdef APP-PLUS
+		if (uni.getSystemInfoSync().platform === 'ios') {
+			this.CustomBar = 0;
+		}
+		// #endif
+	},
+	methods: {
+		// 初始化数据
+		initData() {
+			this.user = uni.getStorageSync('user');
+			// 缓存大小
+			this.setList[5].content = `${uni.getStorageInfoSync().currentSize} kb`;
+			// #ifdef APP-PLUS
+			// eslint-disable-next-line
+			this.setList[8].content = `当前版本 ${plus.runtime.version}`;
+			// #endif
 		},
-		onLoad () {
-			this.initData();
-		},
-		computed: {
-			...mapState(['userInfo']),
-		},
-		methods:{
-			...mapMutations(['login', 'logout']),
-			initData () {
-        this.user = uni.getStorageSync('user');
-				const _this = this;
-				uni.getStorageInfo({
-					success (res) {
-						_this.currentStorageSize = res.currentSize;
-					}
-				})
-			},
-			navTo(url){
-				if (url === '清除缓存') {
-					uni.showModal({
-				    content: '确定要清除缓存吗',
-				    success: (e)=>{
-				    	if(e.confirm){
-				    		this.currentStorageSize = 0;
-				    		uni.clearStorageSync();
-                this.$api.msg('清除缓存成功');
-                setTimeout(() => {
-                  this.login(this.user);
-                  uni.reLaunch({
-                      url: '/pages/user/user'
-                  });
-                }, 1.5 * 1000);
-				    		this.LoadProgress();
-				    	}
-				    }
-					});
-				} else if (!url) {
-					this.$api.msg('我还没写');
-				} else {
-					uni.navigateTo({
-						url,
-					})
-				}
-			},
-			LoadProgress() {
-				this.loadProgress = this.loadProgress + 6;
-				if (this.loadProgress < 100) {
-					setTimeout(() => {
-						this.LoadProgress();
-					}, 100)
-				} else {
-					this.loadProgress = 0;
-          this.login(this.user);
-          this.$api.msg('清除缓存成功')
-				}
-			},
-			//退出登录
-			toLogout(){
+		// 通用跳转
+		navTo(route) {
+			if (!route) return;
+			if (route === 'clearCache') {
 				uni.showModal({
-				    content: '确定要退出登录么',
-				    success: (e)=>{
-				    	if(e.confirm){
-				    		this.$post(`${logout}`).then(r => {
-									this.logout();
-									uni.reLaunch({
-										url: '/pages/user/user'
-									})
-								})
-				    	}
-				    }
+					content: '确定要清除缓存吗',
+					success: e => {
+						if (e.confirm) {
+							uni.clearStorageSync();
+							this.setList[5].content = '0 kb';
+							this.$mStore.commit('login', this.user);
+							this.$mHelper.toast('清除缓存成功');
+						}
+					}
 				});
-			},
-			//switch
-			switchChange(e){
-				let statusTip = e.detail.value ? '打开': '关闭';
-				this.$api.msg(`${statusTip}消息推送`);
-			},
-
-		}
-	}
-</script>
-
-<style lang='scss'>
-	page{
-		background: $page-color-base;
-	}
-	.list-cell{
-		display:flex;
-		align-items:baseline;
-		padding: 20upx $page-row-spacing;
-		line-height:60upx;
-		position:relative;
-		background: #fff;
-		justify-content: center;
-		&.log-out-btn{
-			margin-top: 40upx;
-			.cell-tit{
-				color: $uni-color-primary;
-				text-align: center;
-				margin-right: 0;
+				return;
+			} else if (route === 'versionUpgrade') {
+				this.isVersionUpgradeShow = true;
+				if (this.isNewVersion) {
+					this.$mHelper.toast('已经是最新版本');
+				}
+				return;
 			}
-		}
-		&.cell-hover{
-			background:#fafafa;
-		}
-		&.b-b:after{
-			left: 30upx;
-		}
-		&.m-t{
-			margin-top: 16upx;
-		}
-		.cell-more{
-			align-self: baseline;
-			font-size:$font-lg;
-			color:$font-color-light;
-			margin-left:10upx;
-		}
-		.cell-tit{
-			flex: 1;
-			font-size: $font-base + 2upx;
-			color: $font-color-dark;
-			margin-right:10upx;
-		}
-		.cell-tip{
-			font-size: $font-base;
-			color: $font-color-light;
-		}
-		switch{
-			transform: translateX(16upx) scale(.84);
+			this.$mRouter.push({ route });
+		},
+		// 退出登录
+		toLogout() {
+			uni.showModal({
+				content: '确定要退出登录么',
+				success: e => {
+					if (e.confirm) {
+						this.$http.post(`${logout}`).then(() => {
+							this.$mStore.commit('logout');
+							uni.reLaunch({
+								url: '/pages/profile/profile'
+							});
+						});
+					}
+				}
+			});
+		},
+		showColorModal() {
+			this.colorModal = true;
+		},
+		SetColor(item) {
+			this.colorModal = false;
+			this.themeColor = item;
+			this.$mStore.commit('setThemeColor', item);
 		}
 	}
+};
+</script>
+<style lang="scss">
+page {
+	background: $page-color-base;
+}
+.set {
+	padding: $spacing-base 0;
+}
+.cu-list.card-menu {
+	margin: $spacing-base 0;
+	.title {
+		margin-left: $spacing-base;
+	}
+}
 </style>
